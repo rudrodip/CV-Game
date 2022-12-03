@@ -25,5 +25,9 @@ def video():
 def game():
     return render_template("game.html")
 
+@app.route("/dev", methods=["GET", "POST"])
+def dev():
+    return render_template("dev.html")
+
 if __name__ == "__main__":
     app.run(debug=True)

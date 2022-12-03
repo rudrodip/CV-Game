@@ -1,0 +1,44 @@
+{% extends "base.html" %} {% block title %} Dev Menu {% endblock %} {%
+block style %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='/css/home.css') }}"
+/>
+{% endblock %} {% block content %}
+<main>
+  <section class="dev-section">
+    <h1 class="title">Developer section</h1>
+
+    <h2 class="sub-title">Camera feed</h2>
+    <div class="video-feed">
+      <img src="{{ url_for('video') }}" id="frame" />
+    </div>
+
+    <form name="myForm" action="" method="post" onsubmit="">
+      <h2 class="setting-title">Settings</h2>
+      <label class="container"
+        >Raw
+        <input type="radio" checked="checked" name="radio" />
+        <span class="checkmark"></span>
+      </label>
+      <label class="container"
+        >Warpped
+        <input type="radio" name="radio" />
+        <span class="checkmark"></span>
+      </label>
+      <label class="container"
+        >Image Color
+        <input type="radio" name="radio" />
+        <span class="checkmark"></span>
+      </label>
+      <label class="container"
+        >Mask
+        <input type="radio" name="radio" />
+        <span class="checkmark"></span>
+      </label>
+    </form>
+  </section>
+</main>
+
+<script src="{{url_for('static', filename='js/script.js')}}"></script>
+{% endblock %}

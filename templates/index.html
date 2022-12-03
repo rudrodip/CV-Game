@@ -1,33 +1,16 @@
-{% extends "base.html" %} 
-
-{% block title %} Open World Game {% endblock %} 
-
-{% block style %}
+{% extends "base.html" %} {% block title %} Open World Game {% endblock %} {%
+block style %}
 <link
   rel="stylesheet"
   href="{{ url_for('static', filename='/css/home.css') }}"
 />
-{% endblock %} 
-
-{% block content %}
-
+{% endblock %} {% block content %}
 <main>
   <section class="canvas-section">
-    <div class="canvas" id="">
-      huh?
-    </div>
-  </section>
-
-  <section class="dev-section">
-    <h1 class="title">Developer section</h1>
-
-    <h2 class="sub-title">Camera feed</h2>
-    <div class="video-feed">
-      <img src="{{ url_for('video') }}" width="50%" id="frame"/>
-    </div>
+    <h1 class="title">Canvas</h1>
+    <canvas id="myCanvas"> </canvas>
   </section>
 </main>
 
-
-<script src="{{url_for('static', filename='js/script.js')}}"></script>
+<script src="{{url_for('static', filename='js/canvas.js')}}"></script>
 {% endblock %}

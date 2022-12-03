@@ -1,5 +1,6 @@
 import cv2
 import cvzone
+import cv2.aruco as aruco
 from cvzone.ColorModule import ColorFinder
 import numpy as np
 import math
@@ -37,6 +38,21 @@ class CameraFeed:
         # hsv value
         self.hsvVals = {"hmin": 139, "smin": 48, "vmin": 134, "hmax": 167, "smax": 255, "vmax": 253}
 
+
+    def findArucoMarker(self, frame, markerSize=6, posibilities=250, draw=True):
+        # converting frame to gray scale
+        grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # getting key for aruco dictionary
+        key = getattr(aruco, f'DICT_{markerSize}X{markerSize}_{posibilities}')
+
+        arucoDict = aruco.Dictionary_get(key)
+        arucoParam = aruco.DetectorParameters_create()
+
+        bboxs, ids, rejected = aruco.detectMarkers(grayFrame, arucoDict, parameters=arucoParam)
+
+        if draw:
+            aruco.drawDetectedMarkers(frame, bboxs)
 
     def setPoints(self, x, y):
         x, y = int(x), int(y)
@@ -98,6 +114,8 @@ class CameraFeed:
                     if contours and self.showContours:
                         cx, cy = contours[0]["center"]
                         cv2.circle(warppedFrame, (cx, cy), 5, (0, 255, 0), -1)
+
+            self.findArucoMarker(warppedFrame)
 
             if self.videoFormat == "raw":
                 _, frame = cv2.imencode(".jpg", frame)
