@@ -5,100 +5,118 @@ import numpy as np
 import math
 
 
-cap = cv2.VideoCapture(0)
-# resize
-frameResizeFactor = 0.7
+class CameraFeed:
 
-# width and height of video capture
-width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    def __init__(self, frameResizeFactor=0.7, videoFormat="warpped", showContours=True, camera=0):
 
-# warpped width and height
-warpWidth = int(width)
-warpHeight = int(height)
+        # setting initial variables
+        self.frameResizeFactor = frameResizeFactor
+        self.videoFormat = videoFormat
+        self.showContours = showContours
+        self.camera = camera
 
-# selected points and points to transform
-selectedPts = np.empty((0, 2), np.float32)
-warppedPts = np.empty((0, 2), np.float32)
+        # capturing the camera
+        self.cap = cv2.VideoCapture(camera)
 
-# if 4 points are selected, then warp should be true
-warpTrue = False
-# transformation matrix is None at initialization
-matrix = None
+        # width and height of video capture
+        self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-# color finder
-colorFinder = ColorFinder(False)
-# hsv value
-hsvVals = {"hmin": 139, "smin": 48, "vmin": 134, "hmax": 167, "smax": 255, "vmax": 253}
+        # warpped width and height
+        self.warpWidth = int(self.width)
+        self.warpHeight = int(self.height)
 
+        # selected points and points to transform
+        self.selectedPts = np.empty((0, 2), np.float32)
+        self.warppedPts = np.empty((0, 2), np.float32)
 
-def getArea(event, x, y, flags, param):
-    global selectedPts, warpTrue, warpWidth, warpHeight, matrix
+        self.warpped = False
+        self.matrix = None
 
-    if event == cv2.EVENT_LBUTTONDOWN and selectedPts.shape[0] <= 4:
-        selectedPts = np.append(selectedPts, np.float32([[x, y]]), axis=0)
-
-    if selectedPts.shape[0] >= 4:
-        if matrix is None:
-            getProportion()
-            matrix = cv2.getPerspectiveTransform(selectedPts, warppedPts)
-        warpTrue = True
-    else:
-        warpTrue = False
+        self.colorFinder = ColorFinder(False) # debugger is disabled
+        # hsv value
+        self.hsvVals = {"hmin": 139, "smin": 48, "vmin": 134, "hmax": 167, "smax": 255, "vmax": 253}
 
 
-def drawCircles(pts, frame):
-    for pt in pts:
-        cv2.circle(frame, (int(pt[0]), int(pt[1])), 2, (0, 255, 0), -1)
+    def setPoints(self, event, x, y, flags, params):
+        x, y = int(x), int(y)
+        if event == cv2.EVENT_LBUTTONDOWN and self.selectedPts.shape[0] <= 4:
+            self.selectedPts = np.append(self.selectedPts, np.float32([[x, y]]), axis=0)
 
-def getProportion():
-    global warpWidth, warpHeight, warppedPts
-    pt1, pt2, pt3 = selectedPts[0], selectedPts[1], selectedPts[2]
+        if self.selectedPts.shape[0] >= 4:
+            if self.matrix is None:
+                self.setProportion()
+                self.matrix = cv2.getPerspectiveTransform(self.selectedPts, self.warppedPts)
+            self.warpped = True
+        else:
+            self.warpped = False
 
-    l1 = math.sqrt((pt1[0] - pt2[0])**2 + (pt1[1] - pt2[1])**2)
-    l2 = math.sqrt((pt2[0] - pt3[0])**2 + (pt2[1] - pt3[1])**2)
+    def drawCircles(self, pts, frame):
+        for pt in pts[:4]:
+            cv2.circle(frame, (int(pt[0]), int(pt[1])), 2, (0, 255, 0), -1)
 
-    proportion = l1/l2
+    def setProportion(self):
+        pt1, pt2, pt3 = self.selectedPts[:3]
 
-    warpHeight = int(l2 * 1.5)
-    warpWidth = int(warpHeight * proportion)
-    warppedPts = np.float32([[0, 0], [warpWidth, 0], [warpWidth, warpHeight], [0, warpHeight]])
+        dis = lambda x1, y1, x2, y2: math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
-    print(proportion)
+        l1 = dis(pt1[0], pt1[1], pt2[0], pt2[1])
+        l2 = dis(pt2[0], pt2[1], pt3[0], pt3[1])
 
-# main loop
-def loop():
-    while True:
-        # Capture frame-by-frame
-        ret, frame = cap.read()
+        proportion = l1 / l2 # width/height
 
-        # drawCircles where selected points are
-        drawCircles(selectedPts, frame)
+        self.warpHeight = int(l2 * 1.5)
+        self.warpWidth = int(self.warpHeight * proportion)
+        self.warppedPts = np.float32(
+            [[0, 0], [self.warpWidth, 0], [self.warpWidth, self.warpHeight], [0, self.warpHeight]]
+        )
 
-        if warpTrue:
-            frame = cv2.warpPerspective(frame, matrix, (warpWidth, warpHeight))
-            frame = cv2.resize(frame, (0, 0), None, frameResizeFactor, frameResizeFactor)
+    def getFrames(self):
+        while True:
+            success, frame = self.cap.read()
+            warppedFrame = frame
 
-            # color finder
-            imageColor, mask = colorFinder.update(frame, hsvVals)
-            frame, contours = cvzone.findContours(frame, mask, minArea=200)
+            if not success:
+                break
+            else:
+                self.drawCircles(self.selectedPts, frame)
 
-            if contours:
-                cx, cy = contours[0]["center"]
-                cv2.circle(frame, (cx, cy), 5, (0, 255, 0), -1)
+                if self.warpped:
+                    warppedFrame = cv2.warpPerspective(
+                        frame, self.matrix, (self.warpWidth, self.warpHeight)
+                    )
+                    warppedFrame = cv2.resize(
+                        warppedFrame, (0, 0), None, self.frameResizeFactor, self.frameResizeFactor
+                    )
 
-        # showing frames
-        cv2.imshow("Video", frame)
+                    # color finder
+                    imageColor, mask = self.colorFinder.update(warppedFrame, self.hsvVals)
+                    warppedFrame, contours = cvzone.findContours(
+                        warppedFrame, mask, minArea=200
+                    )
 
-        # mouse event
-        cv2.setMouseCallback("Video", getArea)
+                    if contours and self.showContours:
+                        cx, cy = contours[0]["center"]
+                        cv2.circle(warppedFrame, (cx, cy), 5, (0, 255, 0), -1)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+            if self.videoFormat == "raw":
+                cv2.imshow("Video", frame)
+            elif self.videoFormat == "warpped":
+                cv2.imshow("Video", warppedFrame)
+            elif self.videoFormat == "imgColor":
+                cv2.imshow("Video", imageColor)
+            elif self.videoFormat == "mask":
+                cv2.imshow("Video", mask)
 
-    # When everything is done, release the capture
-    cap.release()
-    cv2.destroyAllWindows()
+            # mouse event
+            cv2.setMouseCallback("Video", self.setPoints)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+        # When everything is done, release the capture
+        self.cap.release()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    loop()
+    cam = CameraFeed()
+    cam.getFrames()
