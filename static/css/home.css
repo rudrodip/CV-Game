@@ -1,0 +1,23 @@
+.video-feed{
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.canvas-section{
+    width: 150%;
+}
+
+.canvas{
+    height: 100%;
+    width: 100%;
+    background-color: gray;
+    border: 2px solid white;
+}
+
+.dev-section{
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    border: 2px solid white;
+}
