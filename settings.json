@@ -1,4 +1,12 @@
 {
-    "x_scale": 1,
-    "y_scale": 1
+  "x_scale": 1,
+  "y_scale": 1,
+  "hsvVals": {
+    "hmin": 139,
+    "smin": 48,
+    "vmin": 134,
+    "hmax": 167,
+    "smax": 255,
+    "vmax": 253
+  }
 }

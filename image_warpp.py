@@ -39,7 +39,7 @@ class CameraFeed:
         self.hsvVals = {"hmin": 139, "smin": 48, "vmin": 134, "hmax": 167, "smax": 255, "vmax": 253}
 
 
-    def findArucoMarker(self, frame, markerSize=6, posibilities=250, draw=True):
+    def findArucoMarker(self, frame, markerSize=4, posibilities=50, draw=True):
         # converting frame to gray scale
         grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -92,6 +92,7 @@ class CameraFeed:
         while True:
             success, frame = self.cap.read()
             warppedFrame = frame
+            self.findArucoMarker(frame)
 
             if not success:
                 break
@@ -116,7 +117,6 @@ class CameraFeed:
                         cx, cy = contours[0]["center"]
                         cv2.circle(warppedFrame, (cx, cy), 5, (0, 255, 0), -1)
 
-                    self.findArucoMarker(warppedFrame)
 
             if self.videoFormat == "raw":
                 cv2.imshow("Video", frame)
