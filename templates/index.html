@@ -7,10 +7,10 @@ block style %}
 {% endblock %} {% block content %}
 <main>
   <section class="canvas-section">
-    <h1 class="title">Canvas</h1>
     <canvas id="myCanvas"> </canvas>
   </section>
 </main>
 
 <script src="{{url_for('static', filename='js/canvas.js')}}"></script>
+<script src="{{url_for('static', filename='js/calibration.js')}}"></script>
 {% endblock %}
