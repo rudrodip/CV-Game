@@ -28,7 +28,8 @@ class CameraFeed:
         self.warpHeight = int(self.height)
 
         # selected points and points to transform
-        self.selectedPts = np.empty((0, 2), np.float32)
+        self.selectedPts = np.empty((4, 2), np.float32)
+        self.selectedPts.fill(-1)
         self.warppedPts = np.empty((0, 2), np.float32)
 
         self.warpped = False
@@ -59,17 +60,18 @@ class CameraFeed:
 
     def setPoints(self, frame):
         ids, bboxs = self.findArucoMarker(frame)
-        if ids:
+        if ids is not None:
             for id, bbox in zip(ids, bboxs):
-                print(id, bbox)
+                x, y = int(bbox[0][0][0]), int(bbox[0][0][1]) # top left corner
 
-        if self.selectedPts.shape[0] <= 4:
-            self.selectedPts = np.append(self.selectedPts, np.float32([[x, y]]), axis=0)
+                # if ids array has 4 elements, then store all top left points in selectedPts
+                if len(ids) == 4:
+                    self.selectedPts[id] = np.float32([[x, y]])
 
-        if self.selectedPts.shape[0] >= 4:
-            if self.matrix is None:
-                self.setProportion()
-                self.matrix = cv2.getPerspectiveTransform(self.selectedPts, self.warppedPts)
+        if not np.any(self.selectedPts[:, 0] == -1):
+            # if self.matrix is None:
+            self.setProportion()
+            self.matrix = cv2.getPerspectiveTransform(self.selectedPts, self.warppedPts)
             self.warpped = True
         else:
             self.warpped = False
@@ -99,6 +101,7 @@ class CameraFeed:
             if not success:
                 break
             else:
+                self.setPoints(frame)
                 if self.warpped:
                     warppedFrame = cv2.warpPerspective(
                         frame, self.matrix, (self.warpWidth, self.warpHeight)

@@ -30,10 +30,10 @@ function arucoImageDraw() {
     img_2.src = './static/ArucoMarkers/marker_2.png';
     img_3.src = './static/ArucoMarkers/marker_3.png';
 
-    img_0.onload = () => ctx.drawImage(img_0, 0, 0)
-    img_1.onload = () => ctx.drawImage(img_1, width - 200, 0)
-    img_2.onload = () => ctx.drawImage(img_2, width - 200, height - 200)
-    img_3.onload = () => ctx.drawImage(img_3, 0, height - 200)
+    img_0.onload = () => ctx.drawImage(img_0, 10, 10)
+    img_1.onload = () => ctx.drawImage(img_1, width - 210, 10)
+    img_2.onload = () => ctx.drawImage(img_2, width - 210, height - 210)
+    img_3.onload = () => ctx.drawImage(img_3, 10, height - 210)
 }
 
 arucoImageDraw()
