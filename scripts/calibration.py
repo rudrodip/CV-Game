@@ -1,39 +1,61 @@
 import cv2
 import cvzone
-import cv2.aruco as aruco
+from cv2 import aruco
 from cvzone.ColorModule import ColorFinder
 import numpy as np
 import math
 
 
-class CameraFeed:
-
-    def __init__(self, frameResizeFactor=0.7, videoFormat="warpped", showContours=True, camera=0):
-
-        # setting initial variables
-        self.frameResizeFactor = frameResizeFactor
-        self.videoFormat = videoFormat
-        self.showContours = showContours
-        self.camera = camera
-
-        # capturing the camera
-        self.cap = cv2.VideoCapture(camera)
-
-        # width and height of video capture
-        self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-        # warpped width and height
-        self.warpWidth = int(self.width)
-        self.warpHeight = int(self.height)
-
-        # selected points and points to transform
+class ImageWarp:
+    def __init__(self):
         self.selectedPts = np.empty((4, 2), np.float32)
         self.selectedPts.fill(-1)
         self.warppedPts = np.empty((0, 2), np.float32)
 
         self.warpped = False
         self.matrix = None
+
+    def setProportion(self):
+        pt1, pt2, pt3 = self.selectedPts[:3]
+
+        dis = lambda x1, y1, x2, y2: math.sqrt((x1-x2)**2 + (y1-y2)**2)
+
+        l1 = dis(pt1[0], pt1[1], pt2[0], pt2[1])
+        l2 = dis(pt2[0], pt2[1], pt3[0], pt3[1])
+
+        proportion = l1 / l2 # width/height
+
+        self.warpHeight = int(l2 * 1.5)
+        self.warpWidth = int(self.warpHeight * proportion)
+        self.warppedPts = np.float32(
+            [[0, 0], [self.warpWidth, 0], [self.warpWidth, self.warpHeight], [0, self.warpHeight]]
+        )
+
+    def warppedImage(self, frame):
+        warppedFrame = cv2.warpPerspective(
+                        frame, self.matrix, (self.warpWidth, self.warpHeight)
+                    )
+        warppedFrame = cv2.resize(
+            warppedFrame, (0, 0), None, self.frameResizeFactor, self.frameResizeFactor
+        )
+
+        return warppedFrame
+
+
+
+class CameraFeed(ImageWarp):
+
+    def __init__(self, frameResizeFactor=0.7, videoFormat="warpped", showContours=True, camera=0):
+
+        self.frameResizeFactor = frameResizeFactor
+        self.videoFormat = videoFormat
+        self.showContours = showContours
+        self.camera = camera
+
+        super().__init__()
+
+        # capturing the camera
+        self.cap = cv2.VideoCapture(camera)
 
         self.colorFinder = ColorFinder(False) # debugger is disabled
         # hsv value
@@ -76,39 +98,19 @@ class CameraFeed:
         else:
             self.warpped = False
 
-    def setProportion(self):
-        pt1, pt2, pt3 = self.selectedPts[:3]
-
-        dis = lambda x1, y1, x2, y2: math.sqrt((x1-x2)**2 + (y1-y2)**2)
-
-        l1 = dis(pt1[0], pt1[1], pt2[0], pt2[1])
-        l2 = dis(pt2[0], pt2[1], pt3[0], pt3[1])
-
-        proportion = l1 / l2 # width/height
-
-        self.warpHeight = int(l2 * 1.5)
-        self.warpWidth = int(self.warpHeight * proportion)
-        self.warppedPts = np.float32(
-            [[0, 0], [self.warpWidth, 0], [self.warpWidth, self.warpHeight], [0, self.warpHeight]]
-        )
 
     def getFrames(self):
         while True:
             success, frame = self.cap.read()
             warppedFrame = frame
-            self.findArucoMarker(frame)
 
             if not success:
                 break
             else:
+                self.findArucoMarker(frame)
                 self.setPoints(frame)
                 if self.warpped:
-                    warppedFrame = cv2.warpPerspective(
-                        frame, self.matrix, (self.warpWidth, self.warpHeight)
-                    )
-                    warppedFrame = cv2.resize(
-                        warppedFrame, (0, 0), None, self.frameResizeFactor, self.frameResizeFactor
-                    )
+                    warppedFrame = self.warppedImage(frame)
 
                     # color finder
                     imageColor, mask = self.colorFinder.update(warppedFrame, self.hsvVals)
@@ -138,5 +140,5 @@ class CameraFeed:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = CameraFeed()
+    cam = CameraFeed(camera='test.mp4')
     cam.getFrames()
