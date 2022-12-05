@@ -1,6 +1,6 @@
 import cv2
 import cvzone
-import cv2.aruco as aruco
+from cv2 import aruco
 from cvzone.ColorModule import ColorFinder
 import numpy as np
 import math
@@ -44,13 +44,14 @@ class ImageWarp:
 
 class CameraFeed(ImageWarp):
 
-    def __init__(self, frameResizeFactor=0.7, showContours=True, camera=0):
+    def __init__(self, frameResizeFactor=0.7, videoFormat="warpped", showContours=True, camera=0):
         super().__init__()
 
         # setting initial variables
         self.frameResizeFactor = frameResizeFactor
         self.showContours = showContours
         self.camera = camera
+        self.videoFormat = videoFormat
 
         # capturing the camera
         self.cap = cv2.VideoCapture(camera)
