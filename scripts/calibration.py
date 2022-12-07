@@ -6,62 +6,21 @@ import numpy as np
 import math
 
 
-class ImageWarp:
-    def __init__(self):
-        self.selectedPts = np.empty((4, 2), np.float32)
-        self.selectedPts.fill(-1)
-        self.warppedPts = np.empty((0, 2), np.float32)
+class CameraFeed:
 
-        self.warpped = False
-        self.matrix = None
+    def __init__(self, camera=0, debugger=False):
 
-    def setProportion(self):
-        pt1, pt2, pt3 = self.selectedPts[:3]
-
-        dis = lambda x1, y1, x2, y2: math.sqrt((x1-x2)**2 + (y1-y2)**2)
-
-        l1 = dis(pt1[0], pt1[1], pt2[0], pt2[1])
-        l2 = dis(pt2[0], pt2[1], pt3[0], pt3[1])
-
-        proportion = l1 / l2 # width/height
-
-        self.warpHeight = int(l2 * 1.5)
-        self.warpWidth = int(self.warpHeight * proportion)
-        self.warppedPts = np.float32(
-            [[0, 0], [self.warpWidth, 0], [self.warpWidth, self.warpHeight], [0, self.warpHeight]]
-        )
-
-    def warppedImage(self, frame):
-        warppedFrame = cv2.warpPerspective(
-                        frame, self.matrix, (self.warpWidth, self.warpHeight)
-                    )
-        warppedFrame = cv2.resize(
-            warppedFrame, (0, 0), None, self.frameResizeFactor, self.frameResizeFactor
-        )
-
-        return warppedFrame
-
-
-
-class CameraFeed(ImageWarp):
-
-    def __init__(self, frameResizeFactor=0.7, videoFormat="warpped", showContours=True, camera=0):
-
-        self.frameResizeFactor = frameResizeFactor
-        self.videoFormat = videoFormat
-        self.showContours = showContours
         self.camera = camera
-
-        super().__init__()
 
         # capturing the camera
         self.cap = cv2.VideoCapture(camera)
 
-        self.colorFinder = ColorFinder(False) # debugger is disabled
+        self.colorFinder = ColorFinder(debugger) # debugger is disabled
         # hsv value
-        self.hsvVals = {"hmin": 139, "smin": 48, "vmin": 134, "hmax": 167, "smax": 255, "vmax": 253}
+        self.hsvVals = {'hmin': 31, 'smin': 63, 'vmin': 0, 'hmax': 44, 'smax': 255, 'vmax': 255}
 
 
+    # function for detecting aruco markers
     def findArucoMarker(self, frame, markerSize=4, posibilities=50, draw=True):
         # converting frame to gray scale
         grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -79,66 +38,94 @@ class CameraFeed(ImageWarp):
 
         return ids, bboxs
 
+    # mouse event handler
+    def on_mouse(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            param[0] = [x, y]
 
-    def setPoints(self, frame):
-        ids, bboxs = self.findArucoMarker(frame)
-        if ids is not None:
-            for id, bbox in zip(ids, bboxs):
-                x, y = int(bbox[0][0][0]), int(bbox[0][0][1]) # top left corner
+        elif event == cv2.EVENT_LBUTTONUP:
+            param[2] = True
 
-                # if ids array has 4 elements, then store all top left points in selectedPts
-                if len(ids) == 4:
-                    self.selectedPts[id] = np.float32([[x, y]])
-
-        if not np.any(self.selectedPts[:, 0] == -1):
-            # if self.matrix is None:
-            self.setProportion()
-            self.matrix = cv2.getPerspectiveTransform(self.selectedPts, self.warppedPts)
-            self.warpped = True
-        else:
-            self.warpped = False
+        if not param[2]:
+            param[1] = [x, y]
 
 
-    def getFrames(self):
+    # drawing rectangle for crop
+    def draw_rect(self, boxes, frame):
+        start, end, draw = boxes
+        if start != [-1, -1]:
+            image = cv2.rectangle(frame, (start[0], start[1]), (end[0], end[1]), (0, 255, 0), 1)
+            return image
+        return frame
+
+
+    # main function for getting all frames
+    def getFrames(self, frameResizeFactor=0.4, column=2, recording=False, fileName="testing.mp4", showPos=False, showContours=True):
+        self.boxes = [[-1, -1], [-1, -1], False]
+        self.posList = []
+
         while True:
             success, frame = self.cap.read()
-            warppedFrame = frame
-
+            crop = frame
+            
             if not success:
                 break
             else:
                 self.findArucoMarker(frame)
-                self.setPoints(frame)
-                if self.warpped:
-                    warppedFrame = self.warppedImage(frame)
 
-                    # color finder
-                    imageColor, mask = self.colorFinder.update(warppedFrame, self.hsvVals)
-                    warppedFrame, contours = cvzone.findContours(
-                        warppedFrame, mask, minArea=200
+                # color finder
+
+                if self.boxes[0] != [-1, -1] and not self.boxes[2]:
+                    self.draw_rect(self.boxes, frame)
+                
+                if self.boxes[2]:
+                    crop = frame[self.boxes[0][1]:self.boxes[1][1],self.boxes[0][0]:self.boxes[1][0]]
+
+                    imageColor, mask = self.colorFinder.update(crop, self.hsvVals)
+                    imageContours, contours = cvzone.findContours(
+                        crop, mask, minArea=200
                     )
 
-                    if contours and self.showContours:
+                    if contours and showContours:
                         cx, cy = contours[0]["center"]
-                        cv2.circle(warppedFrame, (cx, cy), 5, (0, 255, 0), -1)
+                        area = int(contours[0]["area"])
+                        cv2.circle(crop, (cx, cy), 5, (0, 255, 0), -1)
+                        self.posList.append(contours[0]['center'])
 
+                        cv2.putText(crop, f'({cx}, {cy}, {area})', (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
-            if self.videoFormat == "raw":
-                cv2.imshow("Calibration", frame)
-            elif self.videoFormat == "warpped":
-                cv2.imshow("Calibration", warppedFrame)
-            elif self.videoFormat == "imgColor":
-                cv2.imshow("Calibration", imageColor)
-            elif self.videoFormat == "mask":
-                cv2.imshow("Calibration", mask)
+                    if showPos:
+                        for i, pos in enumerate(self.posList):
+                            cv2.circle(crop, pos, 5, (0, 255, 0), -1)
+                            if i == 0:
+                                cv2.line(crop, pos, pos, (255, 0, 0), 2)
+                            cv2.line(crop, pos, self.posList[i-1], (255, 0, 0), 2)
 
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+                    imgStack = cvzone.stackImages([crop, imageContours, imageColor, mask], column, frameResizeFactor)
+                    cv2.imshow('Stack', imgStack)
+
+            if not self.boxes[2]:
+                cv2.imshow('video', frame)
+                cv2.setMouseCallback('video', self.on_mouse, param=self.boxes)
+
+            if recording:
+                self.writer.write(imgStack)
+
+            # if 'q' is pressed, loop breaks, if 'space' is pressed, then video playback is paused
+            key = cv2.waitKey(30)
+            if key == ord('q'):
                 break
+            if key == ord(' '):
+                cv2.waitKey(-1)
+
+            # checks if the window 'video' exist, if and self.boxes[0] -> {this boolean variables gives where specific points are given to crop the image} then destroy the window
+            if cv2.getWindowProperty('video', cv2.WND_PROP_VISIBLE) >= 1 and self.boxes[2]:
+                cv2.destroyWindow('video')
 
         # When everything is done, release the capture
         self.cap.release()
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = CameraFeed(camera='test.mp4')
-    cam.getFrames()
+    cam = CameraFeed(camera='polyFit.mp4', debugger=False)
+    cam.getFrames(recording=False, frameResizeFactor=0.6, showPos=True)
