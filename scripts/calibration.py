@@ -3,7 +3,7 @@ import cvzone
 from cv2 import aruco
 from cvzone.ColorModule import ColorFinder
 import numpy as np
-import math
+import random
 
 
 class CameraFeed:
@@ -11,13 +11,13 @@ class CameraFeed:
     def __init__(self, camera=0, debugger=False):
 
         self.camera = camera
-
         # capturing the camera
         self.cap = cv2.VideoCapture(camera)
-
         self.colorFinder = ColorFinder(debugger) # debugger is disabled
         # hsv value
         self.hsvVals = {'hmin': 31, 'smin': 63, 'vmin': 0, 'hmax': 44, 'smax': 255, 'vmax': 255}
+        self.boxes = [[-1, -1], [-1, -1], False]
+        self.posList = []
 
 
     # function for detecting aruco markers
@@ -58,65 +58,64 @@ class CameraFeed:
             return image
         return frame
 
+    def process_frame(self, frame, frameResizeFactor, column, showContours, showPos):
+        self.findArucoMarker(frame)
+
+        if self.boxes[0] != [-1, -1] and not self.boxes[2]:
+            self.draw_rect(self.boxes, frame)
+                
+        if self.boxes[2]:
+            crop = frame[self.boxes[0][1]:self.boxes[1][1],self.boxes[0][0]:self.boxes[1][0]]
+
+            imageColor, mask = self.colorFinder.update(crop, self.hsvVals)
+            imageContours, contours = cvzone.findContours(
+                crop, mask, minArea=200
+            )
+
+            if contours and showContours:
+                cx, cy = contours[0]["center"]
+                area = int(contours[0]["area"])
+                cv2.circle(crop, (cx, cy), 5, (0, 255, 0), -1)
+                self.posList.append(contours[0]['center'])
+
+                cv2.putText(crop, f'({cx}, {cy}, {area})', (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+
+            if showPos:
+                for i, pos in enumerate(self.posList):
+                    cv2.circle(crop, pos, 5, (0, 255, 0), -1)
+                    if i == 0:
+                        cv2.line(crop, pos, pos, (255, 0, 0), 2)
+                    cv2.line(crop, pos, self.posList[i-1], (255, 0, 0), 2)
+
+            frame = cvzone.stackImages([crop, imageContours, imageColor, mask], column, frameResizeFactor)
+
+        return frame
+
 
     # main function for getting all frames
-    def getFrames(self, frameResizeFactor=0.4, column=2, recording=False, fileName="testing.mp4", showPos=False, showContours=True):
+    def getFrames(self, frameResizeFactor=0.4, column=2, showPos=False, showContours=True):
         self.boxes = [[-1, -1], [-1, -1], False]
-        self.posList = []
 
         while True:
             success, frame = self.cap.read()
-            crop = frame
             
-            if not success:
-                break
-            else:
-                self.findArucoMarker(frame)
+            if not success: break
 
-                # color finder
-
-                if self.boxes[0] != [-1, -1] and not self.boxes[2]:
-                    self.draw_rect(self.boxes, frame)
-                
-                if self.boxes[2]:
-                    crop = frame[self.boxes[0][1]:self.boxes[1][1],self.boxes[0][0]:self.boxes[1][0]]
-
-                    imageColor, mask = self.colorFinder.update(crop, self.hsvVals)
-                    imageContours, contours = cvzone.findContours(
-                        crop, mask, minArea=200
-                    )
-
-                    if contours and showContours:
-                        cx, cy = contours[0]["center"]
-                        area = int(contours[0]["area"])
-                        cv2.circle(crop, (cx, cy), 5, (0, 255, 0), -1)
-                        self.posList.append(contours[0]['center'])
-
-                        cv2.putText(crop, f'({cx}, {cy}, {area})', (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-
-                    if showPos:
-                        for i, pos in enumerate(self.posList):
-                            cv2.circle(crop, pos, 5, (0, 255, 0), -1)
-                            if i == 0:
-                                cv2.line(crop, pos, pos, (255, 0, 0), 2)
-                            cv2.line(crop, pos, self.posList[i-1], (255, 0, 0), 2)
-
-                    imgStack = cvzone.stackImages([crop, imageContours, imageColor, mask], column, frameResizeFactor)
-                    cv2.imshow('Stack', imgStack)
+            imgStack = self.process_frame(frame, frameResizeFactor, column, showContours, showPos) 
+            cv2.imshow('Stack', imgStack)
 
             if not self.boxes[2]:
                 cv2.imshow('video', frame)
                 cv2.setMouseCallback('video', self.on_mouse, param=self.boxes)
 
-            if recording:
-                self.writer.write(imgStack)
 
-            # if 'q' is pressed, loop breaks, if 'space' is pressed, then video playback is paused
-            key = cv2.waitKey(30)
+            key = cv2.waitKey(20)
             if key == ord('q'):
                 break
             if key == ord(' '):
                 cv2.waitKey(-1)
+            if key == ord('c'):
+                cv2.imwrite(f'saved/{random.randint(0, 1000)}.png', frame)
 
             # checks if the window 'video' exist, if and self.boxes[0] -> {this boolean variables gives where specific points are given to crop the image} then destroy the window
             if cv2.getWindowProperty('video', cv2.WND_PROP_VISIBLE) >= 1 and self.boxes[2]:
@@ -127,5 +126,5 @@ class CameraFeed:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = CameraFeed(camera='polyFit.mp4', debugger=False)
-    cam.getFrames(recording=False, frameResizeFactor=0.6, showPos=True)
+    cam = CameraFeed(camera='basicvideo.mp4', debugger=False)
+    cam.getFrames(frameResizeFactor=0.6, showPos=True)

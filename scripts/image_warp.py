@@ -1,9 +1,10 @@
 import cv2
+import numpy as np
+import math
+import random
 import cvzone
 from cv2 import aruco
 from cvzone.ColorModule import ColorFinder
-import numpy as np
-import math
 
 class ImageWarp:
     def __init__(self):
@@ -13,6 +14,10 @@ class ImageWarp:
 
         self.warpped = False
         self.matrix = None
+
+        self.colorFinder = ColorFinder(False) # debugger is disabled
+        # hsv value
+        self.hsvVals = {'hmin': 31, 'smin': 63, 'vmin': 0, 'hmax': 44, 'smax': 255, 'vmax': 255}
 
     def setProportion(self):
         pt1, pt2, pt3 = self.selectedPts[:3]
@@ -67,18 +72,25 @@ class LiveWarp(ImageWarp):
         for pt in pts[:4]:
             cv2.circle(frame, (int(pt[0]), int(pt[1])), 2, (0, 255, 0), -1)
 
-    def frameProcessing(self, frame, windowName, resizeFactor):
-        frame = cv2.resize(frame, (0, 0), None, resizeFactor, resizeFactor)
-
+    def frameProcessing(self, frame, resizeFactor):
         if self.warpped:
             frame = self.warppedImage(frame)
         else:
             self.drawCircles(self.selectedPts, frame)
 
-        cv2.imshow(windowName, frame)
+        # imageColor, mask = self.colorFinder.update(frame, self.hsvVals)
+        # imageContours, contours = cvzone.findContours(
+        #     frame, mask, minArea=200
+        # )
 
-        # mouse event
-        cv2.setMouseCallback(windowName, self.setPoints)
+        # if contours:
+        #     cx, cy = contours[0]["center"]
+        #     area = int(contours[0]["area"])
+        #     cv2.circle(imageContours, (cx, cy), 5, (0, 255, 0), -1)
+        #     cv2.putText(imageContours, f'({area})', (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
+
+        frame = cv2.resize(frame, (0, 0), None, resizeFactor, resizeFactor)
+        return frame
 
 
     def frameLoop(self, windowName='video', resizeFactor=1):
@@ -91,13 +103,19 @@ class LiveWarp(ImageWarp):
             if not success:
                 break
             else:
-                self.frameProcessing(frame, windowName, resizeFactor)
-            
+                frame = self.frameProcessing(frame, resizeFactor)
+                cv2.imshow(windowName, frame)
+
+            # mouse event
+            cv2.setMouseCallback(windowName, self.setPoints)
+
             key = cv2.waitKey(20)
             if key == ord('q'):
                 break
             if key == ord(' '):
-                cv2.waitKey(-1) 
+                cv2.waitKey(-1)
+            if key == ord('c'):
+                cv2.imwrite(f'saved/save{random.randint(0, 100)}.png', frame)
 
         # When everything is done, release the capture
         if self.cameraType == 'video':
@@ -105,5 +123,5 @@ class LiveWarp(ImageWarp):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = LiveWarp(cameraType='video', source='basicvideo.mp4')
+    cam = LiveWarp(cameraType='video', source=0)
     cam.frameLoop(windowName='video warp', resizeFactor=1)
