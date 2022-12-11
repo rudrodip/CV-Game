@@ -123,5 +123,5 @@ class LiveWarp(ImageWarp):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = LiveWarp(cameraType='video', source=0)
+    cam = LiveWarp(cameraType='image', source='test.jpg')
     cam.frameLoop(windowName='video warp', resizeFactor=1)
