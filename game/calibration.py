@@ -1,5 +1,7 @@
 import random
 import pygame
+from detect_object import CameraFeed
+import calib_data
 
 class Game:
     def __init__(self, width, height):
@@ -18,6 +20,9 @@ class Game:
 
         # window title
         pygame.display.set_caption('WooooooooooW game')
+        # icon
+        icon = pygame.image.load('game/icon.png')
+        pygame.display.set_icon(icon)
 
         # running loop
         self.running = True
