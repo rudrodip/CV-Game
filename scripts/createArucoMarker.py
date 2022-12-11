@@ -13,7 +13,7 @@ def generateArucoMarker(filename, marker_size, possibilities, image_size, id):
 
 for i in range(4):
     generateArucoMarker(
-        f"./static/ArucoMarkers/marker_{i}.png",
+        f"marker_{i}.png",
         marker_size=4,
         possibilities=50,
         image_size=200,

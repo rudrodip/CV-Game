@@ -7,6 +7,7 @@ class Game:
         self.screen = pygame.display.set_mode((800, 600))
         self.running = True
         self.balls = []
+        self.count = 0
         self.clock = pygame.time.Clock()
 
     def run(self):
@@ -25,12 +26,17 @@ class Game:
             if len(self.balls) < 5:
                 ball = Ball()
                 self.balls.append(ball)
+                self.count += 1
 
             # Update the screen
             self.screen.fill((255, 255, 255))
             for ball in self.balls:
                 ball.update()
                 ball.draw(self.screen)
+
+            if self.count >= 20:
+                self.running = False
+            
             pygame.display.flip()
 
 class Ball:
