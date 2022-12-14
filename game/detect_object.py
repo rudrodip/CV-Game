@@ -93,7 +93,7 @@ class CameraFeed:
 
             frame = cvzone.stackImages([crop, imageContours, imageColor, mask], column, frameResizeFactor)
 
-        return [frame, cx, cy, area, markers]
+        return frame, [cx, cy, area, markers]
 
 
     # main function for getting all frames
@@ -103,12 +103,10 @@ class CameraFeed:
             
             if not success: break
 
+            imgStack, processed = self.process_frame(frame, frameResizeFactor, column, showContours, showPos)
             if show:
-                imgStack = self.process_frame(frame, frameResizeFactor, column, showContours, showPos)[0]
                 cv2.imshow('Stack', imgStack)
-            else:
-                data = self.process_frame(frame, frameResizeFactor, column, showContours, showPos)
-                print(data[1], data[2], data[3], data[4])
+            print(processed)
 
             if not self.boxes[2]:
                 cv2.imshow('video', frame)
@@ -133,5 +131,5 @@ class CameraFeed:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = CameraFeed(camera='test_example.mp4', debugger=False)
+    cam = CameraFeed(camera=0, debugger=False)
     cam.getFrames(frameResizeFactor=0.6, showPos=False, show=True)

@@ -127,4 +127,4 @@ class CameraFeed:
 
 if __name__ == "__main__":
     cam = CameraFeed(camera='test_example.mp4', debugger=False)
-    cam.getFrames(frameResizeFactor=0.6, showPos=True) 
+    cam.getFrames(frameResizeFactor=0.6, showPos=False) 
