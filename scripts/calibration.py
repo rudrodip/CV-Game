@@ -17,7 +17,8 @@ class CameraFeed:
         # hsv value
         self.hsvVals = {'hmin': 31, 'smin': 63, 'vmin': 0, 'hmax': 44, 'smax': 255, 'vmax': 255}
         self.boxes = [[-1, -1], [-1, -1], False]
-        self.posList = []
+        self.data = []
+        self.count = 0
 
 
     # function for detecting aruco markers
@@ -76,46 +77,46 @@ class CameraFeed:
                 cx, cy = contours[0]["center"]
                 area = int(contours[0]["area"])
                 cv2.circle(crop, (cx, cy), 5, (0, 255, 0), -1)
-                self.posList.append(contours[0]['center'])
-
+                data = [(cx, cy), area, self.count]
+                self.data.append(data)
                 cv2.putText(crop, f'({cx}, {cy}, {area})', (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
+                cv2.imwrite(f'saved/{self.count}.png', crop)
+                print(self.count)
+                self.count += 1
+
             if showPos:
-                for i, pos in enumerate(self.posList):
-                    cv2.circle(crop, pos, 5, (0, 255, 0), -1)
+                for i, data in enumerate(self.data):
+                    cv2.circle(crop, data[0], 5, (0, 255, 0), -1)
                     if i == 0:
-                        cv2.line(crop, pos, pos, (255, 0, 0), 2)
-                    cv2.line(crop, pos, self.posList[i-1], (255, 0, 0), 2)
+                        cv2.line(crop, data[0], data[0], (255, 0, 0), 2)
+                    cv2.line(crop, data[0], self.data[i-1][0], (255, 0, 0), 2)
 
             frame = cvzone.stackImages([crop, imageContours, imageColor, mask], column, frameResizeFactor)
-
         return frame
 
 
     # main function for getting all frames
     def getFrames(self, frameResizeFactor=0.4, column=2, showPos=False, showContours=True):
         self.boxes = [[-1, -1], [-1, -1], False]
-
         while True:
             success, frame = self.cap.read()
             
             if not success: break
 
             imgStack = self.process_frame(frame, frameResizeFactor, column, showContours, showPos) 
-            cv2.imshow('Stack', imgStack)
+            # cv2.imshow('Stack', imgStack)
 
             if not self.boxes[2]:
                 cv2.imshow('video', frame)
                 cv2.setMouseCallback('video', self.on_mouse, param=self.boxes)
 
-
-            key = cv2.waitKey(20)
+            key = cv2.waitKey(1)
             if key == ord('q'):
+                print(self.area)
                 break
             if key == ord(' '):
                 cv2.waitKey(-1)
-            if key == ord('c'):
-                cv2.imwrite(f'saved/{random.randint(0, 1000)}.png', frame)
 
             # checks if the window 'video' exist, if and self.boxes[0] -> {this boolean variables gives where specific points are given to crop the image} then destroy the window
             if cv2.getWindowProperty('video', cv2.WND_PROP_VISIBLE) >= 1 and self.boxes[2]:
@@ -124,6 +125,10 @@ class CameraFeed:
         # When everything is done, release the capture
         self.cap.release()
         cv2.destroyAllWindows()
+        with open('config.txt', 'a') as f:
+            for data in self.data:
+                f.write(f'{data}\n')
+
 
 if __name__ == "__main__":
     cam = CameraFeed(camera='test_example.mp4', debugger=False)
