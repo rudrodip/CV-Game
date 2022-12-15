@@ -127,7 +127,7 @@ class CameraFeed:
         cv2.destroyAllWindows()
         with open('config.txt', 'a') as f:
             for data in self.data:
-                f.write(f'{data}\n')
+                f.write(f'{data[0][0]} {data[0][1]} {data[1]} {data[2]}\n')
 
 
 if __name__ == "__main__":
