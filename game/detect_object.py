@@ -17,9 +17,9 @@ class CameraFeed:
         self.colorFinder = ColorFinder(debugger) # debugger is disabled
         # hsv value
         self.hsvVals = {'hmin': 31, 'smin': 63, 'vmin': 0, 'hmax': 44, 'smax': 255, 'vmax': 255}
-        self.boxes = calib_data.read()
-        if not self.boxes:
-            self.boxes = [[-1, -1], [-1, -1], False]
+        #self.boxes = calib_data.read()
+        #if not self.boxes:
+        self.boxes = [[-1, -1], [-1, -1], False]
         self.posList = []
 
 
@@ -97,16 +97,15 @@ class CameraFeed:
 
 
     # main function for getting all frames
-    def getFrames(self, frameResizeFactor=0.4, column=2, showPos=False, showContours=True, show=True):
+    def getFrames(self, frameResizeFactor=0.4, column=2, showPos=False, showContours=True, feed=True):
         while True:
             success, frame = self.cap.read()
             
             if not success: break
 
             imgStack, processed = self.process_frame(frame, frameResizeFactor, column, showContours, showPos)
-            if show:
+            if feed:
                 cv2.imshow('Stack', imgStack)
-            print(processed)
 
             if not self.boxes[2]:
                 cv2.imshow('video', frame)
@@ -131,5 +130,5 @@ class CameraFeed:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = CameraFeed(camera=0, debugger=False)
-    cam.getFrames(frameResizeFactor=0.6, showPos=False, show=True)
+    cam = CameraFeed(camera=0, debugger=True)
+    cam.getFrames(frameResizeFactor=0.6, showPos=False, feed=True)

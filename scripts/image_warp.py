@@ -78,17 +78,6 @@ class LiveWarp(ImageWarp):
         else:
             self.drawCircles(self.selectedPts, frame)
 
-        # imageColor, mask = self.colorFinder.update(frame, self.hsvVals)
-        # imageContours, contours = cvzone.findContours(
-        #     frame, mask, minArea=200
-        # )
-
-        # if contours:
-        #     cx, cy = contours[0]["center"]
-        #     area = int(contours[0]["area"])
-        #     cv2.circle(imageContours, (cx, cy), 5, (0, 255, 0), -1)
-        #     cv2.putText(imageContours, f'({area})', (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
-
         frame = cv2.resize(frame, (0, 0), None, resizeFactor, resizeFactor)
         return frame
 
@@ -123,5 +112,5 @@ class LiveWarp(ImageWarp):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    cam = LiveWarp(cameraType='image', source='test.jpg')
+    cam = LiveWarp(cameraType='video', source=0)
     cam.frameLoop(windowName='video warp', resizeFactor=1)

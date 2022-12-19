@@ -1,38 +1,59 @@
 import pygame
+import os
 
 class Platform:
     loaded_imgs = {}
     loaded_fonts = {}
     loaded_texts = {}
 
-    def __init__(self, width: int, height: int, musicFileName: str, volume: float, caption: str, icon: str):
+    def __init__(self, width: int, height: int, resizable: bool, fullscreen: bool, musicFileName: str, volume: float, caption: str, icon: str, custom_cursor: str):
         # initializing pygame
         pygame.init()
         pygame.font.init()
 
-        pygame.mixer.music.load(musicFileName)
-        pygame.mixer.music.play(-1)
-        pygame.mixer.music.set_volume(volume)
+        # setting the absolute path
+        self.abs_path = os.path.dirname(__file__)
+
+        # cursor customization
+        if custom_cursor:
+            pygame.mouse.set_visible(False)
+            self.cursor = pygame.image.load(os.path.join(self.abs_path, 'cursor.png'))
+            self.cursor = pygame.transform.scale(self.cursor, (20, 20))
+            self.cursor_rect = self.cursor.get_rect()
+
+        if musicFileName:
+            pygame.mixer.music.load(os.path.join(self.abs_path, musicFileName))
+            pygame.mixer.music.play(-1)
+            pygame.mixer.music.set_volume(volume)
 
         # default parameters
         self.width = width
         self.height = height
-        self.scrWidth = self.width
-        self.scrHeight = self.height
 
-        # monitor size
-        self.monitor_size = (
-            pygame.display.Info().current_w,
-            pygame.display.Info().current_h,
-        )
+        if resizable:
+            self.scrWidth = self.width
+            self.scrHeight = self.height
 
-        # initializing display
-        self.screen = pygame.display.set_mode(
-            (self.width, self.height), pygame.RESIZABLE
-        )
+            # monitor size
+            self.monitor_size = (
+                pygame.display.Info().current_w,
+                pygame.display.Info().current_h,
+            )
+
+            # initializing display
+            self.screen = pygame.display.set_mode(
+                (self.width, self.height), pygame.RESIZABLE
+            )
+        else:
+            self.screen = pygame.display.set_mode(
+                (self.width, self.height)
+            )
 
         # window title
-        pygame.display.set_caption(caption)
+        if caption:
+            pygame.display.set_caption(caption)
+        pygame.display.set_caption('Platform')
+
         # icon
         if icon:
             icon = pygame.image.load(icon)
@@ -45,11 +66,12 @@ class Platform:
         self.clock = pygame.time.Clock()
 
         # fullscreen bool
-        self.fullscreen = False
+        if fullscreen:
+            self.fullscreen = False
 
     def drawImage(self, filename: str, pos=(0, 0), scale=1, angle=0):
         if filename in self.loaded_imgs:
-            img = self.loaded_imgs[filename]
+            img = self.loaded_imgs[os.path.join(self.abs_path, filename)]
             pos = self.getPos(pos, (img.get_width(), img.get_height()))
             self.screen.blit(img, pos)
         else:
@@ -60,12 +82,9 @@ class Platform:
 
             img = pygame.transform.scale(img, scaled_size)
             img = pygame.transform.rotate(img, angle)
+            pos = self.getPos(pos, (img.get_width(), img.get_height()))
 
-            # new pos is prev_pos - offset
-            if type(pos) == str:
-                pos = self.getPos(pos, (img.get_width(), img.get_height()))
-
-            self.loaded_imgs[filename] = img
+            self.loaded_imgs[os.path.join(self.abs_path, filename)] = img
             self.screen.blit(img, pos)
 
     def setText(

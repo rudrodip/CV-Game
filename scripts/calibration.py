@@ -59,7 +59,7 @@ class CameraFeed:
             return image
         return frame
 
-    def process_frame(self, frame, frameResizeFactor, column, showContours, showPos):
+    def process_frame(self, frame, frameResizeFactor, column, showContours, showPos, saveFrames):
         self.findArucoMarker(frame)
 
         if self.boxes[0] != [-1, -1] and not self.boxes[2]:
@@ -81,8 +81,9 @@ class CameraFeed:
                 self.data.append(data)
                 cv2.putText(crop, f'({cx}, {cy}, {area})', (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
-                cv2.imwrite(f'saved/{self.count}.png', crop)
-                print(self.count)
+                if saveFrames:
+                    cv2.imwrite(f'saved/{self.count}.png', crop)
+                    print(f'{self.count} frame(s) saved')
                 self.count += 1
 
             if showPos:
@@ -92,20 +93,23 @@ class CameraFeed:
                         cv2.line(crop, data[0], data[0], (255, 0, 0), 2)
                     cv2.line(crop, data[0], self.data[i-1][0], (255, 0, 0), 2)
 
-            frame = cvzone.stackImages([crop, imageContours, imageColor, mask], column, frameResizeFactor)
-        return frame
+            if not saveFrames:
+                frame = cvzone.stackImages([crop, imageContours, imageColor, mask], column, frameResizeFactor)
+        return frame if not saveFrames else None
 
 
     # main function for getting all frames
-    def getFrames(self, frameResizeFactor=0.4, column=2, showPos=False, showContours=True):
+    def getFrames(self, frameResizeFactor=0.4, column=2, showPos=False, showContours=True, saveFrames=False):
         self.boxes = [[-1, -1], [-1, -1], False]
         while True:
             success, frame = self.cap.read()
             
             if not success: break
 
-            imgStack = self.process_frame(frame, frameResizeFactor, column, showContours, showPos) 
-            # cv2.imshow('Stack', imgStack)
+            frame = cv2.resize(frame, (0, 0), None, frameResizeFactor, frameResizeFactor)
+            imgStack = self.process_frame(frame, frameResizeFactor, column, showContours, showPos, saveFrames)
+            if not saveFrames:
+                cv2.imshow('Stack', imgStack)
 
             if not self.boxes[2]:
                 cv2.imshow('video', frame)
@@ -125,11 +129,13 @@ class CameraFeed:
         # When everything is done, release the capture
         self.cap.release()
         cv2.destroyAllWindows()
-        with open('config.txt', 'a') as f:
-            for data in self.data:
-                f.write(f'{data[0][0]} {data[0][1]} {data[1]} {data[2]}\n')
+
+        if saveFrames:
+            with open('config.txt', 'a') as f:
+                for data in self.data:
+                    f.write(f'{data[0][0]} {data[0][1]} {data[1]} {data[2]}\n')
 
 
 if __name__ == "__main__":
     cam = CameraFeed(camera='test_example.mp4', debugger=False)
-    cam.getFrames(frameResizeFactor=0.6, showPos=False) 
+    cam.getFrames(frameResizeFactor=0.6, showPos=False, saveFrames=True)

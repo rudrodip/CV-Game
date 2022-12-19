@@ -7,8 +7,9 @@ from pygame_platform import Platform
 
 
 class Game(Platform):
-    def __init__(self, width: int, height: int, musicFileName: str, volume=1, caption="Pygame Game", icon=None):
-        super().__init__(width, height, musicFileName, volume, caption, icon)
+    def __init__(self, width: int, height: int, resizable: bool, fullscreen: bool, musicFileName: str, volume=1, caption="Pygame Game", icon=None, custom_cursor=None):
+        super().__init__(width, height, resizable, fullscreen, musicFileName, volume, caption, icon, custom_cursor)
+        self.mouseVisible = True
 
     def draw_aruco_markers(self):
         # size: 200x200 and padding: 10
@@ -21,7 +22,7 @@ class Game(Platform):
         ]
 
         for i, point in enumerate(points):
-            self.drawImage(f"./ArucoMarkers/marker_{i}.png", pos=point, scale=1)
+            self.drawImage(f"ArucoMarkers/marker_{i}.png", pos=point, scale=1)
 
     def eventHandler(self):
         # handing events
@@ -58,6 +59,10 @@ class Game(Platform):
                 if event.key == K_ESCAPE:
                     self.running = False
 
+                # mouse hide handler
+                if event.key == K_h:
+                    self.mouseVisible = not self.mouseVisible
+
     def run(self):
         BLACK = (0, 0, 0)
         WHITE = (255, 255, 255)
@@ -67,6 +72,7 @@ class Game(Platform):
         while self.running:
             # setting fps to 60
             self.clock.tick(60)
+            self.screen.fill((255, 255, 255))
 
             self.scrWidth, self.scrHeight = (
                 self.screen.get_width(),
@@ -75,12 +81,13 @@ class Game(Platform):
 
             # event handler
             self.eventHandler()
-
-            self.screen.fill((255, 255, 255))
             self.draw_aruco_markers()
 
-            mx, my = pygame.mouse.get_pos()
-            # self.setText("Calibration...", 20, pos="mt 0 0 1 0", foregroundColor=GREEN)
+            
+            # cursor handler
+            if self.mouseVisible and pygame.mouse.get_focused():
+                self.cursor_rect.center = pygame.mouse.get_pos()  # update position 
+                self.screen.blit(self.cursor, self.cursor_rect)
 
             # updates everything in screen
             pygame.display.flip()
@@ -89,9 +96,12 @@ class Game(Platform):
 game = Game(
     width=800,
     height=600,
-    musicFileName="./game/test.mp3",
+    resizable=True,
+    fullscreen=True,
+    musicFileName="test.mp3",
     volume=0.7,
     caption="Base template",
-    icon="./game/icon.png",
+    icon="icon.png",
+    custom_cursor="cursor.png"
 )
 game.run()
